@@ -148,10 +148,9 @@ for row in rows:
     if src_rev: srcs.append(src_rev)
     if d >= datetime.date(2026, 8, 1): srcs.append(RL93)
 
-    ded = 'Dedicated' if row['customer'].count(' ') < 12 and ';' not in row['customer'] and row['customer'].count('  ') == 0 else 'Rideshare'
-    # better heuristic: count customer entities by capitalised runs is unreliable -> use payload count
-    multi = len(re.findall(r'×\s*\d|,', row['payload'])) > 0 or len(row['customer'].split()) > 6
-    ded = 'Rideshare' if multi else 'Dedicated'
+    # Multiple distinct customers on one flight => rideshare; a single customer => dedicated.
+    # Customer entities are semicolon-delimited by the parser, so this is a reliable split.
+    ded = 'Rideshare' if ';' in row['customer'] else 'Dedicated'
 
     completed.append({
         'Flight #': row['flight'],

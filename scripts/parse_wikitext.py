@@ -34,11 +34,19 @@ def clean(t):
     t = re.sub(r'\{\{[^}]*\}\}', ' ', t)
     t = t.replace('&nbsp;', ' ').replace("'''", '').replace("''", '')
     t = t.replace('nowrap |', '').replace('nowrap|', '')
-    t = re.sub(r'^\s*\*\s*', '', t, flags=re.M)
+    # list items -> readable separators (sub-items with commas, top-level with semicolons)
+    t = re.sub(r'^\s*\*\*\s*', ' ~SUB~ ', t, flags=re.M)
+    t = re.sub(r'^\s*\*\s*', ' ~ITEM~ ', t, flags=re.M)
     t = re.sub(r'<br\s*/?>', ' ', t)
     t = re.sub(r'</?small>', '', t)
     t = re.sub(r'\s+', ' ', t)
-    return t.strip(' |')
+    t = t.replace('~SUB~', ',').replace('~ITEM~', ';')
+    t = re.sub(r'\s*\}\}\s*', ' ', t)          # drop unmatched flatlist closers
+    t = re.sub(r'\s*;\s*', '; ', t)
+    t = re.sub(r'\s*,\s*', ', ', t)
+    t = re.sub(r'(;\s*)+', '; ', t)
+    t = re.sub(r'\s+', ' ', t)
+    return t.strip(' |;,')
 
 # Split into sections
 sec_re = re.compile(r'^===?\s*(.+?)\s*===?\s*$', re.M)
