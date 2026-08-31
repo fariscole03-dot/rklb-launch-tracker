@@ -27,6 +27,19 @@ MONEY_COLS = {'Revenue — Disclosed ($)', 'Revenue — Estimated ($)', 'Direct 
 WIDE = {'Notes': 70, 'Sources': 50, 'Timeframe Change History': 34, 'Mission Name': 28,
         'Customer(s)': 30, 'Announced Timeframe': 26, 'Dedicated / Rideshare': 20}
 
+# The CSVs are the master store and keep the full text. In the workbook we cap the
+# trailing "Mission detail:" prose so cells stay readable in Excel/Sheets; everything
+# RICH authored - customer inference, failure flags, revenue basis - is kept in full.
+DETAIL_CAP = 200
+
+def trim(header, value):
+    if header != 'Notes':
+        return value
+    i = value.find('Mission detail:')
+    if i == -1 or len(value) - i <= DETAIL_CAP:
+        return value
+    return value[:i + DETAIL_CAP].rstrip() + '... [full text in data/completed_launches.csv]'
+
 wb = Workbook()
 wb.remove(wb.active)
 
@@ -49,6 +62,7 @@ for tab, fname in TABS:
 
     for ri, row in enumerate(rows[1:], start=2):
         for ci, val in enumerate(row):
+            val = trim(header[ci], val)
             if ci in money_idx and val:
                 try:
                     cell = ws.cell(row=ri, column=ci + 1, value=int(val))
