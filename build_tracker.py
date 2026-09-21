@@ -6,14 +6,17 @@ Regenerates RKLB_Launch_Tracker.xlsx from the CSVs in data/.
 The CSVs are the source of truth and are edited (append-only; corrections
 in place) by RICH each run. This script only formats them into the workbook
 that gets emailed.
+
+Uses xlsxwriter rather than openpyxl: xlsxwriter writes a shared-strings
+table, so the long Sources/Notes text that repeats across rows is stored
+once instead of per cell. That roughly halves the emailed file with no
+loss of content.
 """
 import csv
 import os
 import sys
 
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
+import xlsxwriter
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(REPO, "data")
@@ -25,38 +28,20 @@ TABS = [
     ("Run Log", "run_log.csv"),
 ]
 
-HEADER_FILL = PatternFill("solid", fgColor="0B2E4F")
-HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
-BODY_FONT = Font(size=10)
-BAND_FILL = PatternFill("solid", fgColor="EEF3F8")
-THIN = Side(style="thin", color="B7C4D3")
-BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
-
-# Columns that hold long prose / URLs and should be given generous width + wrap
+# Long prose / URL columns: wide and wrapped.
 WIDE = {
-    "Notes",
-    "Sources",
-    "Timeframe Change History",
-    "Announced Timeframe",
-    "Mission Name",
-    "Customer(s)",
-    "Sources Checked",
-    "Sources Unreachable",
+    "Notes", "Sources", "Timeframe Change History", "Announced Timeframe",
+    "Mission Name", "Customer(s)", "Sources Checked", "Sources Unreachable",
+    "Payload(s)", "Launch Site",
 }
 MONEY = {
-    "Revenue - Disclosed ($)",
-    "Revenue - Estimated ($)",
-    "Direct Mission Costs ($)",
-    "Contract Value - Disclosed ($)",
-    "Contract Value - Estimated ($)",
+    "Revenue - Disclosed ($)", "Revenue - Estimated ($)", "Direct Mission Costs ($)",
+    "Contract Value - Disclosed ($)", "Contract Value - Estimated ($)",
 }
 # Stored as numbers so Excel/Sheets sort them numerically rather than as text.
 INTS = {
-    "Flight #",
-    "Number of Launches in booking",
-    "New Completed Launches Added",
-    "Manifest Rows Added",
-    "Manifest Rows Updated",
+    "Flight #", "Number of Launches in booking", "New Completed Launches Added",
+    "Manifest Rows Added", "Manifest Rows Updated",
 }
 
 
@@ -68,54 +53,70 @@ def load(path):
     return rows[0], rows[1:]
 
 
-def build_sheet(wb, title, header, rows):
-    ws = wb.create_sheet(title)
-    ws.append(header)
-    for cell in ws[1]:
-        cell.fill = HEADER_FILL
-        cell.font = HEADER_FONT
-        cell.alignment = Alignment(vertical="center", wrap_text=True)
-        cell.border = BORDER
-    ws.row_dimensions[1].height = 34
+def build_sheet(wb, fmts, title, header, rows):
+    ws = wb.add_worksheet(title)
+    ws.write_row(0, 0, header, fmts["header"])
+    ws.set_row(0, 34)
+    ws.freeze_panes(1, 0)
 
-    money_idx = {i for i, h in enumerate(header) if h in MONEY}
-    int_idx = {i for i, h in enumerate(header) if h in INTS}
-
-    for r, row in enumerate(rows, start=2):
-        row = row + [""] * (len(header) - len(row))
-        for c, value in enumerate(row[: len(header)]):
-            if c in (money_idx | int_idx) and value.strip():
-                try:
-                    value = float(value) if c in money_idx else int(value)
-                except ValueError:
-                    pass
-            cell = ws.cell(row=r, column=c + 1, value=value)
-            cell.font = BODY_FONT
-            cell.border = BORDER
-            cell.alignment = Alignment(vertical="top", wrap_text=header[c] in WIDE)
-            if isinstance(value, float):
-                cell.number_format = '#,##0;;"-"'
-            if r % 2 == 0:
-                cell.fill = BAND_FILL
-
-    for i, h in enumerate(header, start=1):
-        letter = get_column_letter(i)
+    for i, h in enumerate(header):
         if h in WIDE:
             width = 52
         elif h in MONEY:
             width = 17
         else:
             width = max(11, min(26, len(h) + 4))
-        ws.column_dimensions[letter].width = width
+        ws.set_column(i, i, width)
 
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(header))}{len(rows) + 1}"
+    for r, row in enumerate(rows, start=1):
+        row = row + [""] * (len(header) - len(row))
+        band = "b" if r % 2 == 0 else "a"
+        for c, raw in enumerate(row[: len(header)]):
+            h = header[c]
+            value, kind = raw, "text"
+            if raw.strip() and h in MONEY:
+                try:
+                    value, kind = float(raw), "money"
+                except ValueError:
+                    pass
+            elif raw.strip() and h in INTS:
+                try:
+                    value, kind = int(raw), "int"
+                except ValueError:
+                    pass
+            key = f"{kind}_{'wrap' if h in WIDE else 'plain'}_{band}"
+            ws.write(r, c, value, fmts[key])
+
+    if rows:
+        ws.autofilter(0, 0, len(rows), len(header) - 1)
     return ws
 
 
+def make_formats(wb):
+    base = dict(font_size=10, border=1, border_color="B7C4D3", valign="top")
+    fmts = {
+        "header": wb.add_format(dict(
+            base, bold=True, font_color="FFFFFF", bg_color="0B2E4F",
+            valign="vcenter", text_wrap=True)),
+    }
+    for kind, numfmt in (("text", None), ("money", '#,##0;;"-"'), ("int", "0")):
+        for wrap in (True, False):
+            for band, colour in (("a", None), ("b", "EEF3F8")):
+                spec = dict(base)
+                if wrap:
+                    spec["text_wrap"] = True
+                if colour:
+                    spec["bg_color"] = colour
+                if numfmt:
+                    spec["num_format"] = numfmt
+                key = f"{kind}_{'wrap' if wrap else 'plain'}_{band}"
+                fmts[key] = wb.add_format(spec)
+    return fmts
+
+
 def main():
-    wb = Workbook()
-    wb.remove(wb.active)
+    wb = xlsxwriter.Workbook(OUT, {"constant_memory": False, "strings_to_urls": False})
+    fmts = make_formats(wb)
     counts = []
     for title, fname in TABS:
         path = os.path.join(DATA, fname)
@@ -123,12 +124,12 @@ def main():
             print(f"missing {path}", file=sys.stderr)
             return 1
         header, rows = load(path)
-        build_sheet(wb, title, header, rows)
+        build_sheet(wb, fmts, title, header, rows)
         counts.append((title, len(rows)))
-    wb.save(OUT)
+    wb.close()
     for title, n in counts:
         print(f"{title}: {n} rows")
-    print(f"wrote {OUT}")
+    print(f"wrote {OUT} ({os.path.getsize(OUT):,} bytes)")
     return 0
 
 
