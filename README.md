@@ -29,7 +29,7 @@ projections are made beyond what Rocket Lab has announced.
 ## Regenerating the workbook
 
 ```bash
-pip install openpyxl
+pip install -r requirements.txt
 python3 build_tracker.py
 ```
 
