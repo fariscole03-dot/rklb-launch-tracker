@@ -53,3 +53,11 @@ The file deliberately mixes two granularities, distinguished by the **`Row Type`
 pip install openpyxl
 python3 scripts/build_workbook.py
 ```
+
+## Delivery note (2026-09-28)
+
+The Gmail connector requires attachment bytes inline as base64. The workbook (~42KB, ~57k base64
+characters) exceeds what can be reproduced into a tool call with guaranteed byte-fidelity, so RICH
+delivers it by repo link rather than risk emailing a corrupted file. The workbook is still
+regenerated and committed every run. If an emailed attachment is required, the practical fix is to
+write the workbook to Google Drive and email the Drive link.
