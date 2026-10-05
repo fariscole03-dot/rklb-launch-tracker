@@ -15,16 +15,16 @@ WIKI = 'https://en.wikipedia.org/wiki/List_of_Electron_launches'
 # 2026: H1 2026 disclosed Launch Services revenue $108.249M / 12 missions flown in H1 (10-Q).
 # 2018-2020: pre-IPO, no segment disclosure -> contemporaneous Electron list price, LOW confidence.
 REV_EST = {
-    2017: (None, 'Maiden flight test, no customer revenue'),
-    2018: (5_000_000,  'est. - contemporaneous Electron list price ~$5M; pre-IPO, no segment disclosure; confidence LOW'),
-    2019: (6_000_000,  'est. - contemporaneous Electron list price ~$6M; pre-IPO, no segment disclosure; confidence LOW'),
-    2020: (6_000_000,  'est. - contemporaneous Electron list price ~$6M; pre-IPO, no segment disclosure; confidence LOW'),
-    2021: (6_500_000,  'est. - FY2021 launch services rev $39.0M / 6 missions (FY2022 10-K); confidence MEDIUM'),
-    2022: (6_744_000,  'est. - FY2022 launch services rev $60.7M / 9 missions (FY2022 10-K); confidence MEDIUM'),
-    2023: (7_190_000,  'est. - FY2023 launch services rev $71.9M / 10 missions (FY2023 10-K); confidence MEDIUM'),
-    2024: (7_831_000,  'est. - FY2024 launch services rev $125.3M / 16 missions (FY2025 10-K); confidence MEDIUM'),
-    2025: (9_476_000,  'est. - FY2025 launch services rev $199.0M / 21 missions (FY2025 10-K); confidence MEDIUM'),
-    2026: (9_021_000,  'est. - H1 2026 launch services rev $108.249M / 12 missions (Q2 2026 10-Q); Q3 2026 not yet reported; confidence MEDIUM'),
+    2017: (None, 'maiden flight test, no customer revenue'),
+    2018: (5_000_000,  'est. list price, pre-IPO, conf LOW'),
+    2019: (6_000_000,  'est. list price, pre-IPO, conf LOW'),
+    2020: (6_000_000,  'est. list price, pre-IPO, conf LOW'),
+    2021: (6_500_000,  'est. $39.0M/6 FY21 10-K, conf MED'),
+    2022: (6_744_000,  'est. $60.7M/9 FY22 10-K, conf MED'),
+    2023: (7_190_000,  'est. $71.9M/10 FY23 10-K, conf MED'),
+    2024: (7_831_000,  'est. $125.3M/16 FY25 10-K, conf MED'),
+    2025: (9_476_000,  'est. $199.0M/21 FY25 10-K, conf MED'),
+    2026: (9_021_000,  'est. $108.249M/12 H1-26 10-Q, conf MED'),
 }
 
 SITE = {
@@ -109,16 +109,14 @@ def main():
             notes.append('Dedicated/Rideshare inferred from multiple named customers.')
         if disclosure == 'Undisclosed':
             if r['vehicle'] == 'HASTE':
-                notes.append('INFERENCE: likely US DoD / hypersonic test customer (MDA, DIU or prime '
-                             'contractor) given HASTE suborbital profile, LC-2 Wallops launch and classified '
-                             'payload mass. Confidence: MEDIUM-HIGH.')
+                notes.append('INFERENCE: likely US DoD/hypersonic test customer (MDA, DIU or prime) given HASTE '
+                             'profile, LC-2 Wallops launch and classified payload. Confidence MEDIUM-HIGH.')
             else:
                 notes.append('INFERENCE: customer not named by Rocket Lab. Confidence: LOW.')
         if basis:
-            notes.append(f'Revenue basis: {basis}')
+            notes.append(f'[Rev basis: {basis}; see README]')
         if r['vehicle'] == 'HASTE':
-            notes.append('HASTE = suborbital Electron derivative; counts as a "launch mission" in '
-                         'Rocket Lab launch-services revenue disclosures.')
+            notes.append('HASTE = suborbital Electron derivative; counts as a launch mission in RKLB disclosures.')
         srcs = [WIKI] + [u for u in dict.fromkeys(r['urls'])][:2]
 
         out.append([
