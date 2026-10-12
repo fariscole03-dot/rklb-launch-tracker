@@ -79,3 +79,15 @@ add("Forward Manifest",   "/home/user/rklb-launch-tracker/data/forward_manifest.
 add("Run Log",            "/home/user/rklb-launch-tracker/data/run_log.csv", max_notes_w=90)
 WB.save("/home/user/rklb-launch-tracker/RKLB_Launch_Tracker.xlsx")
 print("xlsx saved")
+
+# Repack at maximum deflate so the workbook stays small enough to email inline.
+import zipfile, os, shutil
+_p = "/home/user/rklb-launch-tracker/RKLB_Launch_Tracker.xlsx"
+_t = _p + ".tmp"
+_zi = zipfile.ZipFile(_p)
+_zo = zipfile.ZipFile(_t, "w", zipfile.ZIP_DEFLATED, compresslevel=9)
+for _it in _zi.infolist():
+    _zo.writestr(_it.filename, _zi.read(_it.filename))
+_zo.close(); _zi.close()
+shutil.move(_t, _p)
+print("repacked:", os.path.getsize(_p), "bytes")
