@@ -20,12 +20,12 @@ def est_rev(date, vehicle):
 def est_basis(date):
     y, m = int(date[:4]), int(date[5:7])
     if y == 2026:
-        return "Est. = $9.2M, RKLB-disclosed avg revenue per launch for 6M ended 2026-06-30 (10-Q). Medium confidence."
+        return "$9.2M = RKLB-disclosed avg revenue/launch, 6M ended 2026-06-30 (10-Q). Medium confidence."
     if y == 2025 and m <= 6:
-        return "Est. = $7.5M, RKLB-disclosed avg revenue per launch for 6M ended 2025-06-30 (10-Q). Medium confidence."
+        return "$7.5M = RKLB-disclosed avg revenue/launch, 6M ended 2025-06-30 (10-Q). Medium confidence."
     if y == 2025:
-        return "Est. = $8.5M, interpolated between disclosed H1-2025 ($7.5M) and H1-2026 ($9.2M) averages. Low-medium confidence."
-    return ("Est. from period Electron pricing trend; no RKLB per-launch disclosure located for this period this run. "
+        return "$8.5M interpolated between disclosed H1-2025 ($7.5M) and H1-2026 ($9.2M). Low-medium confidence."
+    return ("Period Electron pricing trend; no RKLB per-launch disclosure located for this period this run. "
             "Low confidence - flagged for a dedicated filing sweep.")
 
 # Flight#, Date, Vehicle, Mission, Customers, Disclosure, Site, Ded/Ride, Outcome, Recovery, ContractAnnDate, RevDisclosed, DirectCost, Sources, Notes
@@ -131,7 +131,8 @@ R = [
 
 HDR = ["Flight #","Launch Date (UTC)","Vehicle","Mission Name","Customer(s)","Customer Disclosure",
        "Launch Site","Dedicated / Rideshare","Outcome","Recovery","Contract Announcement Date",
-       "Revenue - Disclosed ($)","Revenue - Estimated ($)","Direct Mission Costs ($)","Sources","Notes"]
+       "Revenue - Disclosed ($)","Revenue - Estimated ($)","Revenue Estimate Basis",
+       "Direct Mission Costs ($)","Sources","Notes"]
 
 out = "/home/user/rklb-launch-tracker/data/completed_launches.csv"
 with open(out,"w",newline="") as f:
@@ -140,10 +141,10 @@ with open(out,"w",newline="") as f:
     for (fl,date,veh,mis,cust,disc,site,dr,outc,rec,cad,revd,cost,srcs,notes) in R:
         if fl == 1:
             rev_est = ""            # in-house test flight, no customer revenue
-            basis = "No launch revenue - in-house test flight with no customer payload."
+            basis = "No launch revenue - in-house test flight, no customer payload."
         else:
             rev_est = est_rev(date,veh)
             basis = est_basis(date)
-        w.writerow([fl,date,veh,mis,cust,disc,site,dr,outc,rec,cad,revd,rev_est,cost,
-                    " | ".join(srcs), notes + " || REVENUE BASIS: " + basis])
+        w.writerow([fl,date,veh,mis,cust,disc,site,dr,outc,rec,cad,revd,rev_est,basis,cost,
+                    " | ".join(srcs), notes])
 print("rows:", len(R))
