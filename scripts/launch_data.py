@@ -14,22 +14,21 @@ EST_BY_YEAR = {
     2025: 7.9e6, 2026: 9.2e6,
 }
 EST_BASIS = {
-    2026: "est. = $9.2M avg revenue per launch disclosed for 6M ended 2026-06-30 (Q2 2026 10-Q)",
-    2025: "est. = $7.9M avg revenue per launch disclosed for Q2 2025 (Q2 2026 10-Q comparative)",
-    2024: "est. based on ~$7.5M avg revenue per launch (H1 2025 disclosed $7.5M; FY2024 mix similar)",
-    2023: "est. based on ~$7.5M contemporaneous Electron ASP",
-    2022: "est. based on ~$7.0M contemporaneous Electron ASP",
-    2021: "est. based on ~$7.0M contemporaneous Electron ASP",
-    2020: "est. based on ~$6.0M contemporaneous Electron list price",
-    2019: "est. based on ~$6.0M contemporaneous Electron list price",
-    2018: "est. based on ~$5.0M early Electron list price",
-    2017: "est. based on ~$5.0M early Electron list price; test flight, likely little/no external revenue",
+    2026: "est. $9.2M = disclosed avg revenue/launch H1 2026 (Q2 2026 10-Q)",
+    2025: "est. $7.9M = disclosed avg revenue/launch Q2 2025 (Q2 2026 10-Q comparative)",
+    2024: "est. $7.5M = approx. disclosed avg revenue/launch (H1 2025 disclosed $7.5M; similar FY2024 mix)",
+    2023: "est. $7.5M = contemporaneous Electron ASP",
+    2022: "est. $7.0M = contemporaneous Electron ASP",
+    2021: "est. $7.0M = contemporaneous Electron ASP",
+    2020: "est. $6.0M = contemporaneous Electron list price",
+    2019: "est. $6.0M = contemporaneous Electron list price",
+    2018: "est. $5.0M = early Electron list price",
+    2017: "est. $5.0M = early Electron list price; test flight, likely little/no external revenue",
 }
 # HASTE: derived from disclosed $190M / 20 HASTE launches (2026-03-18 press release).
 HASTE_EST = 9.5e6
-HASTE_BASIS = ("est. = $9.5M, derived from disclosed $190M for 20x HASTE launches (2026-03-18). "
-               "Note the 2026-07-21 USSF award implies a materially higher rate "
-               "($266M potential / 12 firm launches = ~$22M); HASTE pricing varies widely by contract.")
+HASTE_BASIS = ("est. $9.5M = disclosed $190M / 20x HASTE launches (2026-03-18). The 2026-07-21 USSF "
+               "award implies ~$22M/launch ($266M potential / 12 firm), so HASTE pricing varies widely.")
 
 # Flight, Date(UTC), Vehicle, Mission, Customers, Disclosure, Site, Ded/Ride, Outcome, Recovery, extra_sources, Notes
 L = [

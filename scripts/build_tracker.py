@@ -28,8 +28,8 @@ RUNLOG_COLS = ["Run Date (UTC)","Day of Week","Run Type","New Launches Logged",
 
 # Disclosed average cost per launch, by period, from the Q2 2026 10-Q (fleet averages, not per mission).
 COST_NOTE = {
-    2026: "Fleet avg cost per launch disclosed at $4.9M for 6M ended 2026-06-30 (Q2 2026 10-Q); not mission-specific.",
-    2025: "Fleet avg cost per launch disclosed at $5.3M for 6M ended 2025-06-30 (Q2 2026 10-Q comparative); not mission-specific.",
+    2026: "fleet avg $4.9M H1 2026 (10-Q), not mission-specific",
+    2025: "fleet avg $5.3M H1 2025 (10-Q), not mission-specific",
 }
 
 def build_completed():
@@ -75,66 +75,74 @@ def write_csv(path, cols, rows):
         w.writerow(cols)
         w.writerows(rows)
 
+# The workbook renders the CSVs with repeated citations factored into a legend tab, so the
+# emailed file stays small enough to send. The CSVs remain authoritative: they carry the full
+# URL list and the full revenue basis on every row.
+SOURCE_KEYS = [
+    (D.WP, "WIKI-ELECTRON"),
+    (D.RLL, "RL-LAUNCHES"),
+    (D.RLU, "RL-NEWSROOM"),
+    (D.Q2_10Q, "RKLB-10Q-Q2-2026"),
+]
+METHOD_ROWS = [
+    ["SOURCE KEY", "FULL REFERENCE"],
+    ["WIKI-ELECTRON", D.WP],
+    ["RL-LAUNCHES", D.RLL],
+    ["RL-NEWSROOM", D.RLU],
+    ["RKLB-10Q-Q2-2026", D.Q2_10Q],
+    ["", ""],
+    ["REVENUE ESTIMATE BASIS", "(estimates are never mixed with disclosed figures)"],
+] + [[str(y), b] for y, b in sorted(D.EST_BASIS.items(), reverse=True)] + [
+    ["HASTE (all years)", D.HASTE_BASIS],
+    ["", ""],
+    ["DIRECT COSTS", "Disclosed fleet averages only, not mission-specific: $4.9M/launch H1 2026, $5.3M/launch "
+                     "H1 2025 (Q2 2026 10-Q). Per-mission costs undisclosed, so that column is blank."],
+    ["NEUTRON STATUS", D.NEUTRON_NOTE],
+    ["THIS WORKBOOK", "Repeated source URLs appear as the keys above to keep the emailed file small. The CSVs in "
+                      "the repo carry full URLs and the full revenue basis per row and are the master record."],
+]
+
+NOTE_CAP = 185  # workbook only; the CSVs keep the full note text
+
+def _slim(rows, src_i, note_i):
+    """XLSX-only: swap repeated URLs for keys and lift per-row basis boilerplate to the method tab."""
+    out = []
+    for r in rows:
+        r = list(r)
+        src = r[src_i]
+        for url, key in SOURCE_KEYS:
+            src = src.replace(url, key)
+        r[src_i] = src
+        note = r[note_i]
+        for marker in (" | Revenue basis: ", "Revenue basis: "):
+            if marker in note:
+                note = note.split(marker)[0]
+                break
+        note = note.strip() or "-"
+        if len(note) > NOTE_CAP:
+            cut = note[:NOTE_CAP]
+            sp = cut.rfind(" ")
+            note = (cut[:sp] if sp > 110 else cut).rstrip(" ,;.:|") + " ... [full note in CSV]"
+        r[note_i] = note
+        out.append(r)
+    return out
+
 def build_xlsx(completed, manifest, runlog):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from openpyxl.utils import get_column_letter
-
-    wb = Workbook()
-    hdr_fill = PatternFill("solid", fgColor="1F3864")
-    hdr_font = Font(color="FFFFFF", bold=True, size=10)
-    thin = Side(style="thin", color="D9D9D9")
-    border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
-    def sheet(ws, cols, rows, widths, money_cols=(), wrap_cols=(), number_cols=()):
-        ws.append(cols)
-        for c in range(1, len(cols) + 1):
-            cell = ws.cell(row=1, column=c)
-            cell.fill, cell.font, cell.border = hdr_fill, hdr_font, border
-            cell.alignment = Alignment(vertical="center", horizontal="center", wrap_text=True)
-        ws.row_dimensions[1].height = 34
-        for r in rows:
-            ws.append(r)
-        for ri in range(2, ws.max_row + 1):
-            for ci in range(1, len(cols) + 1):
-                cell = ws.cell(row=ri, column=ci)
-                cell.border = border
-                cell.font = Font(size=10)
-                if ci in money_cols:
-                    cell.number_format = '#,##0;[Red]-#,##0'
-                    cell.alignment = Alignment(horizontal="right", vertical="top")
-                elif ci in number_cols:
-                    cell.alignment = Alignment(horizontal="center", vertical="top")
-                elif ci in wrap_cols:
-                    cell.alignment = Alignment(wrap_text=True, vertical="top")
-                else:
-                    cell.alignment = Alignment(vertical="top")
-            if ri % 2 == 0:
-                for ci in range(1, len(cols) + 1):
-                    ws.cell(row=ri, column=ci).fill = PatternFill("solid", fgColor="F4F6FB")
-        for ci, w in enumerate(widths, start=1):
-            ws.column_dimensions[get_column_letter(ci)].width = w
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = f"A1:{get_column_letter(len(cols))}{ws.max_row}"
-
-    ws1 = wb.active
-    ws1.title = "Completed Launches"
-    sheet(ws1, COMPLETED_COLS, completed,
-          [8, 13, 10, 34, 30, 13, 20, 16, 10, 34, 13, 15, 15, 14, 60, 85],
-          money_cols=(12, 13, 14), wrap_cols=(4, 5, 7, 10, 15, 16), number_cols=(1,))
-
-    ws2 = wb.create_sheet("Forward Manifest")
-    sheet(ws2, MANIFEST_COLS, manifest,
-          [14, 16, 34, 13, 11, 46, 34, 17, 17, 18, 70, 60, 85],
-          money_cols=(8, 9), wrap_cols=(3, 6, 7, 11, 12, 13), number_cols=(5,))
-
-    ws3 = wb.create_sheet("Run Log")
-    sheet(ws3, RUNLOG_COLS, runlog,
-          [14, 11, 24, 16, 16, 40, 10, 24, 26, 30, 90],
-          wrap_cols=(6, 10, 11), number_cols=(4, 5))
-
+    import minixlsx
+    sheets = [
+        minixlsx.Sheet("Completed Launches", COMPLETED_COLS, _slim(completed, 14, 15),
+                       [8, 13, 10, 34, 30, 13, 20, 16, 10, 34, 13, 15, 15, 14, 46, 85],
+                       money_cols=(12, 13, 14), wrap_cols=(4, 5, 7, 10, 15, 16), center_cols=(1, 2, 3, 6)),
+        minixlsx.Sheet("Forward Manifest", MANIFEST_COLS, _slim(manifest, 11, 12),
+                       [14, 16, 34, 13, 11, 46, 34, 17, 17, 18, 70, 46, 85],
+                       money_cols=(8, 9), wrap_cols=(3, 6, 7, 11, 12, 13), center_cols=(1, 2, 4, 5)),
+        minixlsx.Sheet("Sources & Method", METHOD_ROWS[0], METHOD_ROWS[1:], [26, 120], wrap_cols=(2,)),
+        minixlsx.Sheet("Run Log", RUNLOG_COLS, runlog,
+                       [14, 11, 24, 16, 16, 40, 10, 24, 26, 30, 90],
+                       wrap_cols=(6, 10, 11), center_cols=(1, 2, 4, 5)),
+    ]
     out = os.path.join(ROOT, "RKLB_Launch_Tracker.xlsx")
-    wb.save(out)
+    minixlsx.write(out, sheets)
     return out
 
 def read_runlog():
